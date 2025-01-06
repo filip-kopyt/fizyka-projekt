@@ -1,3 +1,5 @@
+# taken from https://api.arcade.academy/en/platformer_tutorial_revamp/tutorials/compute_shader/index.html
+
 import random
 from array import array
 from pathlib import Path
@@ -57,12 +59,14 @@ class NBodyGravityWindow(arcade.Window):
         self.center_window()
         
         initial_data = gen_initial_data(self.get_size(), use_color=USE_COLORED_STARS)
+        # SSBO == Shader Storage Buffer Object
         self.ssbo_previous = self.ctx.buffer(data=initial_data)
         self.ssbo_current = self.ctx.buffer(data=initial_data)
         
         buffer_format = "4f 4x4 4f"
         attributes = ["in_vertex", "in_color"]
-        
+
+        # VAO == Vertex Array Object
         self.vao_previous = self.ctx.geometry(
             [BufferDescription(self.ssbo_previous, buffer_format, attributes)],
             mode=self.ctx.POINTS
