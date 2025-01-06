@@ -1,0 +1,66 @@
+#version 430
+
+struct WavePoint
+{
+    float acceleration;
+    float speed;
+    float displacement;
+};
+
+layout(local_size_x=16, local_size_y=16) in;
+
+uniform int SIZE_X = 800, SIZE_Y = 800;
+uniform float dt = 0.050;
+
+layout(std430, binding=0) buffer wave_plane_in
+{
+    WavePoint points[];
+} In;
+
+layout(std430, binding=1) buffer wave_plane_out
+{
+    WavePoint points[];
+} Out;
+
+layout(rgba32f, binding=2) uniform image2D img_out;
+
+int neighbour_id(int id, int dx, int dy)
+{
+    return id + dx + (dy * SIZE_X);
+}
+
+float get_displacement(int id)
+{
+    return id > In.points.length() ? 0 : In.points[id].displacement;
+}
+
+ivec2 texture_coords_from_id(int id) 
+{
+    return ivec2((id % SIZE_X), (id / SIZE_X));
+}
+
+void main()
+{
+    int pos = int(gl_GlobalInvocationID);
+    int n = neighbour_id(pos,  0, -1);
+    int s = neighbour_id(pos,  0,  1);
+    int w = neighbour_id(pos, -1,  0);
+    int e = neighbour_id(pos,  1,  0);
+
+    // this formula can be derived form taylor series for f(x - dx) and f(x + dx)
+    Out.points[pos].acceleration += 
+        (get_displacement(n)
+        + get_displacement(s)
+        + get_displacement(w)
+        + get_displacement(e)
+        - (4 * get_displacement(pos))) / (1 * 1);
+    
+    Out.points[pos].speed += In.points[pos].acceleration * dt;
+
+    float disp = In.points[pos].speed * dt;
+    Out.points[pos].displacement = disp;
+
+    // write colors onto texture for display
+    vec4 pixel = vec4((disp < 0 ? -disp : 0), (disp > 0 ? disp : 0), 0, 1);
+    imageStore(img_out, texture_coords_from_id(pos), pixel);
+}
